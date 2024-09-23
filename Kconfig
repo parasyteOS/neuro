@@ -1,0 +1,9 @@
+menu "TerminalSU"
+
+config TSU
+	tristate "TerminalSU function support"
+	default y
+	help
+	Enable kernel-level root privileges on Android System.
+
+endmenu

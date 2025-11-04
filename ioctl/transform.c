@@ -8,7 +8,7 @@
 
 #include "tsu.h"
 #include "log.h"
-#include "ioctl_handler.h"
+#include "handler.h"
 
 static struct group_info root_groups = { .usage = ATOMIC_INIT(2) };
 
@@ -101,13 +101,13 @@ static int transform(const char *se_context)
 	return 0;
 }
 
-int handle_transform(unsigned long ioctl_param)
+int handle_transform(unsigned long arg)
 {
 	struct tsu_string *context_str;
 	char *se_context;
 	int rc;
 
-	context_str = memdup_user((void __user *)ioctl_param,
+	context_str = memdup_user((void __user *)arg,
 				  sizeof(struct tsu_string));
 	if (IS_ERR(context_str))
 		return PTR_ERR(context_str);

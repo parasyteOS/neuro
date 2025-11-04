@@ -4,7 +4,7 @@
 
 #include "tsu.h"
 #include "log.h"
-#include "ioctl_handler.h"
+#include "handler.h"
 
 struct policy_load_memory {
 	size_t len;
@@ -118,12 +118,12 @@ err:
 }
 
 
-int handle_selinux_policy_getfd(unsigned long ioctl_param)
+int handle_selinux_policy_getfd(unsigned long arg)
 {
 	int fd = selinux_policy_getfd();
 	
 	if (fd < 0)
 		return fd;
 
-	return copy_to_user((void __user *)ioctl_param, &fd, sizeof(int));
+	return copy_to_user((void __user *)arg, &fd, sizeof(int));
 }

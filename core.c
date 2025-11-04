@@ -8,7 +8,7 @@
 #include "log.h"
 #include "tsu.h"
 #include "ecdsa.h"
-#include "ioctl_handler.h"
+#include "handler.h"
 
 static inline bool is_isolated_uid(uid_t uid)
 {
@@ -21,27 +21,6 @@ static inline bool is_isolated_uid(uid_t uid)
 	       (appid >= FIRST_APP_ZYGOTE_ISOLATED_UID &&
 		appid <= LAST_APP_ZYGOTE_ISOLATED_UID);
 }
-
-static long tsu_ioctl(struct file *file, unsigned cmd, unsigned long arg)
-{
-	int rc = -EINVAL;
-	switch(cmd) {
-	case TSU_IOCTL_TRANSFORM:
-		rc = handle_transform(arg);
-		break;
-	case TSU_IOCTL_SEPOL_GETFD:
-		rc = handle_selinux_policy_getfd(arg);
-		break;
-	case TSU_IOCTL_CGROUP_HACK:
-		rc = handle_cgroup_hack(arg);
-		break;
-	}
-	return rc;
-}
-
-static const struct file_operations tsu_fops = {
-	.unlocked_ioctl = tsu_ioctl,
-};
 
 struct sig_payload {
 	u8 *signature;
@@ -93,7 +72,7 @@ free_payload:
 }
 
 int tsu_handle_prctl(int option, unsigned long sig, unsigned long cmd,
-		     unsigned long args, unsigned long reply)
+		     unsigned long arg, unsigned long reply)
 {
 	int _reply = -EINVAL;
 
@@ -107,13 +86,17 @@ int tsu_handle_prctl(int option, unsigned long sig, unsigned long cmd,
 	if (verify_signature((void __user *)sig))
 		return 0;
 
-	if (cmd == CMD_GETFD) {
-		_reply = anon_inode_getfd("[tsu]", &tsu_fops,
-					  NULL, O_RDWR|O_CLOEXEC);
-		goto reply;
+	switch (cmd) {
+	case CMD_SEPOL_GETFD:
+		_reply = handle_selinux_policy_getfd(arg);
+		break;
+	case CMD_TRANSFORM:
+		_reply = handle_transform(arg);
+		break;
+	default:
+		pr_err("Unknown command: %d\n", cmd);
 	}
 
-reply:
 	if (copy_to_user((void __user *)reply, &_reply, sizeof(_reply))) {
 		pr_err("prctl reply error.");
 	}
